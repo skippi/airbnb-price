@@ -1,5 +1,7 @@
 rm(list=ls())
 
+# Data Read
+
 library(readxl)
 AirBnBNYC <- read_excel("AirBnBNYC.xlsx")
 
@@ -26,9 +28,34 @@ tree = tree(price ~ neighbourhood_group + number_of_reviews +
             data = train)
 tree.train_mse = mean(residuals(tree)^2)
 tree.test_mse = mean((predict(tree, test) - test$price)^2)
+tree.num_terminal_nodes = length(unique(tree$where))
 
+test_mses = integer(10)
+for (i in 1:10) {
+  set.seed(i)
+  pd = sample(2,nrow(data),replace = TRUE, prob = c(0.8,0.2))
+  train = data[pd==1,]
+  test = data[pd==2,]
+  tree = tree(price ~ neighbourhood_group + number_of_reviews + 
+                minimum_nights + reviews_per_month + availability_365,
+              data = train)
+  
+  test_mses[i] = mean((predict(tree, test) - test$price)^2)
+}
+mean(test_mses)
+
+summary(tree)
 plot(tree)
 text(tree,cex=.7)
+
+# Pruned Decision Tree
+
+cv_tree = cv.tree(tree)
+optimal_size = cv_tree$size[which.min(cv_tree$dev)]
+
+pruned = prune.tree(tree, best=optimal_size)
+pruned.train_mse = mean(residuals(pruned)^2)
+pruned.test_mse = mean((predict(pruned, test) - test$price)^2)
 
 # Decision Tree Using RPart
 
